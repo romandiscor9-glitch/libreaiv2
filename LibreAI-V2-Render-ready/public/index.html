@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>LibreAI</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="page-loader" id="page-loader"><div class="spinner"></div></div>
+
+  <canvas id="bg-canvas"></canvas>
+  <div class="bg-halo h1"></div>
+  <div class="bg-halo h2"></div>
+  <div class="bg-halo h3"></div>
+  <div class="grain-grid"></div>
+
+  <div class="app-shell" id="app-shell" style="display:none">
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2L4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6l-8-4z" stroke="#0a0d13" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="#0a0d13" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <span class="brand">LibreAI</span>
+      </div>
+
+      <button class="new-chat-btn" id="new-chat-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Nouveau chat
+      </button>
+
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="search-conv" placeholder="Rechercher une conversation…">
+      </div>
+
+      <div class="sidebar-body">
+        <div class="section-label">Conversations récentes</div>
+        <div id="conv-list"></div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="user-pill" id="user-pill">
+          <div class="avatar" id="user-avatar">?</div>
+          <div class="u-meta">
+            <div class="u-name" id="user-name">—</div>
+            <div class="u-email" id="user-email">—</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-3)"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="hamburger" id="hamburger-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <span class="conv-title-display" id="current-conv-title">Nouvelle conversation</span>
+        </div>
+        <div class="top-actions">
+          <button class="btn btn-ghost btn-sm mode-btn active" id="chat-mode-btn">💬 Chat</button>
+          <button class="btn btn-ghost btn-sm mode-btn" id="image-mode-btn">🎨 Images</button>
+          <button class="btn btn-ghost btn-sm mode-btn" id="gallery-mode-btn">🖼️ Galerie</button>
+          <button class="btn btn-ghost btn-sm" id="account-btn">Mon compte</button>
+        </div>
+      </div>
+
+      <div class="chat-scroll" id="chat-scroll">
+        <div class="chat-inner" id="chat-inner">
+          <div class="welcome" id="welcome-screen">
+            <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2L4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6l-8-4z" stroke="#0a0d13" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="#0a0d13" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <h2>Bonjour, comment puis-je vous aider ?</h2>
+            <p>Posez une question, demandez de l'aide pour du code, ou lancez simplement une conversation.</p>
+            <div class="suggestions">
+              <div class="suggestion-chip" data-prompt="Explique-moi les bases de Docker en 5 points.">Explique-moi Docker</div>
+              <div class="suggestion-chip" data-prompt="Écris une fonction JavaScript qui trie un tableau d'objets par date.">Fonction de tri JS</div>
+              <div class="suggestion-chip" data-prompt="Donne-moi 5 idées de titres pour un article de blog sur l'IA.">Idées d'article</div>
+              <div class="suggestion-chip" data-prompt="Résume les avantages et inconvénients du télétravail.">Télétravail : pour/contre</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="tool-panel" id="image-panel" style="display:none">
+        <div class="tool-card glass">
+          <div class="tool-head">
+            <div>
+              <h2>Générer une image</h2>
+              <p>Stable Diffusion · <strong id="image-cost-label">300 crédits</strong></p>
+            </div>
+            <div class="credit-pill" id="image-credit-pill">— crédits</div>
+          </div>
+          <textarea id="image-prompt" maxlength="2000" placeholder="Décris l’image que tu veux créer…"></textarea>
+          <div class="tool-options">
+            <span>1024 × 1024</span>
+            <span id="image-model-label">Stable Diffusion</span>
+          </div>
+          <button class="btn btn-primary" id="generate-image-btn">✨ Générer l’image</button>
+          <div id="image-result"></div>
+        </div>
+      </section>
+
+      <section class="tool-panel" id="gallery-panel" style="display:none">
+        <div class="tool-card glass">
+          <div class="tool-head">
+            <div><h2>Ma galerie</h2><p>Tes images générées avec LibreAI.</p></div>
+            <button class="btn btn-ghost btn-sm" id="refresh-gallery-btn">↻ Actualiser</button>
+          </div>
+          <div class="gallery-grid" id="gallery-grid"><div class="gallery-empty">Chargement…</div></div>
+        </div>
+      </section>
+
+      <div class="composer-wrap">
+        <div class="composer glass">
+          <textarea id="msg-input" rows="1" placeholder="Écrivez votre message à LibreAI…"></textarea>
+          <button class="send-btn" id="send-btn" disabled>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+        </div>
+        <div class="composer-hint">Entrée pour envoyer · Maj+Entrée pour un saut de ligne</div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal compte -->
+  <div class="modal-overlay" id="account-modal" style="display:none">
+    <div class="modal glass">
+      <div class="modal-head">
+        <h3>Mon compte</h3>
+        <button class="modal-close" id="close-account-modal">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:6px">
+        <div class="avatar" style="width:56px;height:56px;font-size:20px;margin-bottom:10px" id="modal-avatar">?</div>
+        <div style="font-weight:600;font-size:16px" id="modal-username">—</div>
+        <div style="color:var(--text-3);font-size:13px" id="modal-email">—</div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="num" id="stat-convs">0</div><div class="lbl">Conversations</div></div>
+        <div class="stat-box"><div class="num" id="stat-msgs">0</div><div class="lbl">Messages envoyés</div></div>
+        <div class="stat-box"><div class="num" id="stat-images">0</div><div class="lbl">Images</div></div>
+      </div>
+      <div class="info-row"><span class="k">Crédits disponibles</span><span class="v" id="modal-credits">—</span></div>
+      <div id="admin-entry" style="display:none;margin-top:14px">
+        <button class="btn btn-primary btn-block" id="open-admin-btn">🛡️ Ouvrir le panneau admin</button>
+      </div>
+      <div>
+        <div class="info-row"><span class="k">Membre depuis</span><span class="v" id="modal-created">—</span></div>
+        <div class="info-row"><span class="k">Dernière connexion</span><span class="v" id="modal-last-login">—</span></div>
+      </div>
+      <button class="btn btn-danger btn-block" id="logout-btn" style="margin-top:20px">Se déconnecter</button>
+    </div>
+  </div>
+
+
+  <div class="admin-overlay" id="admin-overlay" style="display:none">
+    <div class="admin-overlay-head">
+      <strong>LibreAI · Administration</strong>
+      <button class="btn btn-ghost btn-sm" id="close-admin-btn">✕ Fermer</button>
+    </div>
+    <iframe id="admin-frame" title="Panneau administrateur"></iframe>
+  </div>
+  <script src="/js/background.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/markdown.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
