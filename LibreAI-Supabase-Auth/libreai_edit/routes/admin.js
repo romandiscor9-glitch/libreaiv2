@@ -6,12 +6,74 @@ const { requireAdmin } = require('../middleware/admin');
 
 const router = express.Router();
 
+
+// ======================================================
+// Déverrouillage panneau admin
+// ======================================================
+
+router.post('/unlock', (req, res) => {
+
+  try {
+
+    const { code } = req.body || {};
+
+
+    if (!code) {
+
+      return res.status(400).json({
+        error: 'Code requis.'
+      });
+
+    }
+
+
+
+    if (code !== config.ADMIN_ACCESS_CODE) {
+
+      return res.status(403).json({
+        error: 'Code administrateur incorrect.'
+      });
+
+    }
+
+
+
+    req.session.isAdmin = true;
+
+
+    res.json({
+      ok: true
+    });
+
+
+
+  } catch (e) {
+
+    console.error('Admin unlock error:', e);
+
+    res.status(500).json({
+      error: 'Erreur serveur interne.'
+    });
+
+  }
+
+});
+
+
+
+
+// ======================================================
+// Toutes les routes en dessous nécessitent l'accès admin
+// ======================================================
+
 router.use(requireAdmin);
 
 
-// ============================
+
+
+// ======================================================
 // Dashboard statistiques
-// ============================
+// ======================================================
 
 router.get('/stats', (req, res) => {
 
@@ -96,12 +158,9 @@ router.get('/stats', (req, res) => {
 
       conversations,
 
-
       messages,
 
-
       aiRequests,
-
 
       aiErrors
 
@@ -116,9 +175,60 @@ router.get('/stats', (req, res) => {
 
 
     res.status(500).json({
-
       error:'Erreur serveur interne.'
+    });
 
+
+  }
+
+});
+
+
+
+
+
+
+// ======================================================
+// Liste utilisateurs
+// ======================================================
+
+router.get('/users', (req,res)=>{
+
+
+  try {
+
+
+    const users = db.prepare(`
+      SELECT
+      id,
+      email,
+      username,
+      is_active,
+      is_admin,
+      email_verified,
+      credits,
+      created_at,
+      last_login
+      FROM users
+      ORDER BY id DESC
+    `).all();
+
+
+
+    res.json({
+      users
+    });
+
+
+
+  } catch(e) {
+
+
+    console.error(e);
+
+
+    res.status(500).json({
+      error:'Erreur serveur interne.'
     });
 
 
@@ -130,145 +240,102 @@ router.get('/stats', (req, res) => {
 
 
 
-// ============================
-// Liste utilisateurs
-// ============================
-
-router.get('/users', (req,res)=>{
 
 
-try {
-
-
-const users = db.prepare(`
-SELECT
-id,
-email,
-username,
-is_active,
-is_admin,
-email_verified,
-credits,
-created_at,
-last_login
-FROM users
-ORDER BY id DESC
-`).all();
-
-
-
-res.json({
-users
-});
-
-
-
-}catch(e){
-
-console.error(e);
-
-res.status(500).json({
-error:'Erreur serveur interne.'
-});
-
-}
-
-
-});
-
-
-
-
-// ============================
+// ======================================================
 // Modifier utilisateur
-// ============================
+// ======================================================
 
 router.patch('/users/:id', (req,res)=>{
 
 
-try {
+  try {
 
 
-const { is_active } = req.body;
+    const { is_active } = req.body;
 
 
-db.prepare(`
-UPDATE users
-SET is_active = ?
-WHERE id = ?
-`)
-.run(
-is_active ? 1 : 0,
-req.params.id
-);
+    db.prepare(`
+      UPDATE users
+      SET is_active = ?
+      WHERE id = ?
+    `)
+    .run(
+      is_active ? 1 : 0,
+      req.params.id
+    );
 
 
 
-res.json({
-ok:true
+    res.json({
+      ok:true
+    });
+
+
+
+  } catch(e) {
+
+
+    console.error(e);
+
+
+    res.status(500).json({
+      error:'Erreur serveur interne.'
+    });
+
+
+  }
+
+
 });
 
 
 
-}catch(e){
-
-
-console.error(e);
-
-
-res.status(500).json({
-error:'Erreur serveur interne.'
-});
-
-
-}
-
-
-});
 
 
 
-
-// ============================
+// ======================================================
 // Logs admin
-// ============================
+// ======================================================
 
 router.get('/logs',(req,res)=>{
 
 
-try{
+  try{
 
 
-const logs = db.prepare(`
-SELECT *
-FROM admin_logs
-ORDER BY id DESC
-LIMIT 100
-`).all();
+    const logs = db.prepare(`
+      SELECT *
+      FROM admin_logs
+      ORDER BY id DESC
+      LIMIT 100
+    `).all();
 
 
 
-res.json({
-logs
+    res.json({
+      logs
+    });
+
+
+
+  } catch(e) {
+
+
+    console.error(e);
+
+
+    res.status(500).json({
+      error:'Erreur serveur interne.'
+    });
+
+
+  }
+
+
 });
 
 
-
-}catch(e){
-
-
-console.error(e);
-
-
-res.status(500).json({
-error:'Erreur serveur interne.'
-});
-
-
-}
-
-
-});
 
 
 
