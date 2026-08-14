@@ -11,6 +11,7 @@ db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
 
+
 db.exec(`
 
 CREATE TABLE IF NOT EXISTS users (
@@ -97,11 +98,14 @@ ON image_generations(user_id, created_at);
 
 
 
+
 function hasColumn(table, column) {
+
   return db
     .prepare(`PRAGMA table_info(${table})`)
     .all()
     .some((c) => c.name === column);
+
 }
 
 
@@ -118,7 +122,10 @@ function addColumn(table, column, definition) {
   }
 
   return false;
+
 }
+
+
 
 
 
@@ -126,11 +133,13 @@ function addColumn(table, column, definition) {
 // Migrations anciennes bases
 // =========================================================
 
+
 addColumn(
   'users',
   'supabase_id',
   'TEXT'
 );
+
 
 addColumn(
   'users',
@@ -138,11 +147,13 @@ addColumn(
   'INTEGER NOT NULL DEFAULT 0'
 );
 
+
 const addedEmailVerified = addColumn(
   'users',
   'email_verified',
   'INTEGER NOT NULL DEFAULT 0'
 );
+
 
 
 addColumn(
@@ -159,11 +170,13 @@ addColumn(
 );
 
 
+
 addColumn(
   'users',
   'credits',
   'INTEGER NOT NULL DEFAULT 3000'
 );
+
 
 
 addColumn(
@@ -174,30 +187,47 @@ addColumn(
 
 
 
-// Les anciens comptes restent validés
+
+
+// Validation anciens comptes
 if (addedEmailVerified) {
 
-  db.prepare(
-    'UPDATE users SET email_verified = 1'
-  ).run();
+  db.prepare(`
+    UPDATE users
+    SET email_verified = 1
+  `).run();
 
 }
 
 
 
+
+
+// =========================================================
 // Admin principal
+// =========================================================
+
+// Rend automatiquement admin le compte défini dans config.js
 db.prepare(`
-UPDATE users
-SET is_admin = CASE
-WHEN lower(email)=lower(?) THEN 1
-ELSE is_admin
-END
-WHERE lower(email)=lower(?)
+  UPDATE users
+  SET is_admin = 1
+  WHERE lower(email) = lower(?)
 `)
-.run(
-  config.ADMIN_EMAIL,
-  config.ADMIN_EMAIL
-);
+.run(config.ADMIN_EMAIL);
+
+
+
+
+
+// Sécurité supplémentaire pour ton compte admin actuel
+db.prepare(`
+  UPDATE users
+  SET is_admin = 1
+  WHERE lower(email) = lower('grootshoopbs@gmail.com')
+`)
+.run();
+
+
 
 
 
