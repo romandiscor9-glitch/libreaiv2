@@ -5,7 +5,6 @@ const supabase = require('../services/supabase');
 const db = require('../db/database');
 const config = require('../config/config');
 
-
 const router = express.Router();
 
 
@@ -16,13 +15,20 @@ const authLimiter = rateLimit({
 
 
 
+function isAdminEmail(email) {
+  return email &&
+    email.toLowerCase() === config.ADMIN_EMAIL.toLowerCase();
+}
+
+
+
+
 
 // REGISTER
 
 router.post('/register', authLimiter, async(req,res)=>{
 
 try {
-
 
 const {email,password,username}=req.body;
 
@@ -42,13 +48,14 @@ username
 
 
 if(error){
-
 return res.status(400).json({
 error:error.message
 });
-
 }
 
+
+
+const admin = isAdminEmail(email) ? 1 : 0;
 
 
 db.prepare(`
@@ -57,16 +64,18 @@ INSERT OR IGNORE INTO users
 email,
 username,
 password_hash,
-email_verified
+email_verified,
+is_admin
 )
 VALUES
-(?,?,?,?)
+(?,?,?,?,?)
 `)
 .run(
 email,
 username || email.split('@')[0],
 'supabase_auth',
-0
+0,
+admin
 );
 
 
@@ -80,6 +89,7 @@ email
 });
 
 
+
 }catch(e){
 
 console.error(e);
@@ -91,6 +101,9 @@ error:'Erreur serveur interne.'
 }
 
 });
+
+
+
 
 
 
@@ -127,6 +140,7 @@ error:error.message
 
 
 
+
 let user=db.prepare(
 'SELECT * FROM users WHERE email = ? COLLATE NOCASE'
 )
@@ -134,7 +148,13 @@ let user=db.prepare(
 
 
 
+
+
 if(!user){
+
+
+const admin = isAdminEmail(email) ? 1 : 0;
+
 
 const result=db.prepare(`
 INSERT INTO users
@@ -142,17 +162,20 @@ INSERT INTO users
 email,
 username,
 password_hash,
-email_verified
+email_verified,
+is_admin
 )
 VALUES
-(?,?,?,?)
+(?,?,?,?,?)
 `)
 .run(
 email,
 data.user.user_metadata?.username || email.split('@')[0],
 'supabase_auth',
-1
+1,
+admin
 );
+
 
 
 user=db.prepare(
@@ -160,7 +183,28 @@ user=db.prepare(
 )
 .get(result.lastInsertRowid);
 
+
 }
+
+
+
+
+// Sécurité : remet admin si le mail correspond
+
+if(isAdminEmail(user.email) && user.is_admin !== 1){
+
+db.prepare(`
+UPDATE users
+SET is_admin = 1
+WHERE id = ?
+`)
+.run(user.id);
+
+
+user.is_admin = 1;
+
+}
+
 
 
 
@@ -168,6 +212,11 @@ user=db.prepare(
 req.session.userId=user.id;
 
 req.session.access_token=data.session.access_token;
+
+
+// mémorisation admin
+
+req.session.isAdmin = user.is_admin === 1;
 
 
 
@@ -179,7 +228,9 @@ id:user.id,
 
 email:user.email,
 
-username:user.username
+username:user.username,
+
+isAdmin:user.is_admin === 1
 
 }
 
@@ -204,6 +255,9 @@ error:'Erreur serveur interne.'
 
 
 
+
+
+
 // ME
 
 router.get('/me',(req,res)=>{
@@ -220,9 +274,18 @@ error:'Non connecté'
 
 
 const user=db.prepare(
-'SELECT id,email,username FROM users WHERE id=?'
+`
+SELECT 
+id,
+email,
+username,
+is_admin
+FROM users
+WHERE id=?
+`
 )
 .get(req.session.userId);
+
 
 
 
@@ -237,11 +300,21 @@ error:'Session invalide'
 
 
 res.json({
-user
+
+user:{
+id:user.id,
+email:user.email,
+username:user.username,
+isAdmin:user.is_admin === 1
+}
+
 });
 
 
 });
+
+
+
 
 
 
