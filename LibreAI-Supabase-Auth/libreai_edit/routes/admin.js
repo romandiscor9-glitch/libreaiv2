@@ -1,69 +1,13 @@
 const express = require('express');
 
 const db = require('../db/database');
-const config = require('../config/config');
 const { requireAdmin } = require('../middleware/admin');
 
 const router = express.Router();
 
 
 // ======================================================
-// Déverrouillage panneau admin
-// ======================================================
-
-router.post('/unlock', (req, res) => {
-
-  try {
-
-    const { code } = req.body || {};
-
-
-    if (!code) {
-
-      return res.status(400).json({
-        error: 'Code requis.'
-      });
-
-    }
-
-
-
-    if (code !== config.ADMIN_ACCESS_CODE) {
-
-      return res.status(403).json({
-        error: 'Code administrateur incorrect.'
-      });
-
-    }
-
-
-
-    req.session.isAdmin = true;
-
-
-    res.json({
-      ok: true
-    });
-
-
-
-  } catch (e) {
-
-    console.error('Admin unlock error:', e);
-
-    res.status(500).json({
-      error: 'Erreur serveur interne.'
-    });
-
-  }
-
-});
-
-
-
-
-// ======================================================
-// Toutes les routes en dessous nécessitent l'accès admin
+// Protection admin
 // ======================================================
 
 router.use(requireAdmin);
@@ -79,12 +23,10 @@ router.get('/stats', (req, res) => {
 
   try {
 
-
     const totalUsers = db.prepare(`
       SELECT COUNT(*) AS count
       FROM users
     `).get().count;
-
 
 
     const newUsers = db.prepare(`
@@ -94,13 +36,11 @@ router.get('/stats', (req, res) => {
     `).get().count;
 
 
-
     const activeUsers = db.prepare(`
       SELECT COUNT(*) AS count
       FROM users
       WHERE is_active = 1
     `).get().count;
-
 
 
     const onlineUsers = db.prepare(`
@@ -110,12 +50,10 @@ router.get('/stats', (req, res) => {
     `).get().count;
 
 
-
     const conversations = db.prepare(`
       SELECT COUNT(*) AS count
       FROM conversations
     `).get().count;
-
 
 
     const messages = db.prepare(`
@@ -125,12 +63,10 @@ router.get('/stats', (req, res) => {
     `).get().count;
 
 
-
     const aiRequests = db.prepare(`
       SELECT COUNT(*) AS count
       FROM ai_request_logs
     `).get().count;
-
 
 
     const aiErrors = db.prepare(`
@@ -144,17 +80,11 @@ router.get('/stats', (req, res) => {
     res.json({
 
       users: {
-
         total: totalUsers,
-
         new7d: newUsers,
-
         active: activeUsers,
-
         online24h: onlineUsers
-
       },
-
 
       conversations,
 
@@ -168,16 +98,13 @@ router.get('/stats', (req, res) => {
 
 
 
-  } catch(e) {
-
+  } catch (e) {
 
     console.error('Admin stats error:', e);
 
-
     res.status(500).json({
-      error:'Erreur serveur interne.'
+      error: 'Erreur serveur interne.'
     });
-
 
   }
 
@@ -192,27 +119,24 @@ router.get('/stats', (req, res) => {
 // Liste utilisateurs
 // ======================================================
 
-router.get('/users', (req,res)=>{
-
+router.get('/users', (req, res) => {
 
   try {
 
-
     const users = db.prepare(`
       SELECT
-      id,
-      email,
-      username,
-      is_active,
-      is_admin,
-      email_verified,
-      credits,
-      created_at,
-      last_login
+        id,
+        email,
+        username,
+        is_active,
+        is_admin,
+        email_verified,
+        credits,
+        created_at,
+        last_login
       FROM users
       ORDER BY id DESC
     `).all();
-
 
 
     res.json({
@@ -221,19 +145,15 @@ router.get('/users', (req,res)=>{
 
 
 
-  } catch(e) {
+  } catch (e) {
 
-
-    console.error(e);
-
+    console.error('Admin users error:', e);
 
     res.status(500).json({
-      error:'Erreur serveur interne.'
+      error: 'Erreur serveur interne.'
     });
 
-
   }
-
 
 });
 
@@ -246,11 +166,9 @@ router.get('/users', (req,res)=>{
 // Modifier utilisateur
 // ======================================================
 
-router.patch('/users/:id', (req,res)=>{
-
+router.patch('/users/:id', (req, res) => {
 
   try {
-
 
     const { is_active } = req.body;
 
@@ -266,26 +184,21 @@ router.patch('/users/:id', (req,res)=>{
     );
 
 
-
     res.json({
-      ok:true
+      ok: true
     });
 
 
 
-  } catch(e) {
+  } catch (e) {
 
-
-    console.error(e);
-
+    console.error('Admin update user error:', e);
 
     res.status(500).json({
-      error:'Erreur serveur interne.'
+      error: 'Erreur serveur interne.'
     });
 
-
   }
-
 
 });
 
@@ -298,11 +211,9 @@ router.patch('/users/:id', (req,res)=>{
 // Logs admin
 // ======================================================
 
-router.get('/logs',(req,res)=>{
+router.get('/logs', (req, res) => {
 
-
-  try{
-
+  try {
 
     const logs = db.prepare(`
       SELECT *
@@ -312,26 +223,21 @@ router.get('/logs',(req,res)=>{
     `).all();
 
 
-
     res.json({
       logs
     });
 
 
 
-  } catch(e) {
+  } catch (e) {
 
-
-    console.error(e);
-
+    console.error('Admin logs error:', e);
 
     res.status(500).json({
-      error:'Erreur serveur interne.'
+      error: 'Erreur serveur interne.'
     });
 
-
   }
-
 
 });
 
