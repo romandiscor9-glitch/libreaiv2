@@ -1,44 +1,102 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { getCreditStatus } = require('../services/credits');
-const supabase = require('../services/supabase');
+const db = require('../db/database');
 
 const router = express.Router();
 
 
-router.get('/stats', requireAuth, async (req, res) => {
+router.get('/stats', requireAuth, (req, res) => {
+
   try {
 
-    const { data, error } = await supabase.auth.getUser();
+    const user = db.prepare(`
+      SELECT 
+        id,
+        email,
+        username,
+        created_at,
+        last_login,
+        is_admin,
+        email_verified
+      FROM users
+      WHERE id = ?
+    `).get(req.userId);
 
-    if (error || !data.user) {
-      return res.status(401).json({
-        error: 'Utilisateur non authentifié.'
+
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Utilisateur introuvable.'
       });
     }
 
 
-    const user = data.user;
+
+    const conversations = db.prepare(`
+      SELECT COUNT(*) AS c
+      FROM conversations
+      WHERE user_id = ?
+    `).get(req.userId).c;
+
+
+
+    const messages = db.prepare(`
+      SELECT COUNT(*) AS c
+      FROM messages m
+      JOIN conversations c 
+      ON c.id = m.conversation_id
+      WHERE c.user_id = ?
+      AND m.role = 'user'
+    `).get(req.userId).c;
+
+
+
+    const images = db.prepare(`
+      SELECT COUNT(*) AS c
+      FROM image_generations
+      WHERE user_id = ?
+    `).get(req.userId).c;
+
 
 
     res.json({
+
       user: {
+
         email: user.email,
-        username: user.user_metadata?.username || '',
-        createdAt: user.created_at,
-        lastLogin: user.last_sign_in_at,
-        emailVerified: !!user.email_confirmed_at,
-        isAdmin: false
+
+        username: user.username || '',
+
+        createdAt:
+          user.created_at || new Date().toISOString(),
+
+        lastLogin:
+          user.last_login ||
+          user.created_at ||
+          new Date().toISOString(),
+
+        emailVerified:
+          user.email_verified === 1,
+
+        isAdmin:
+          user.is_admin === 1
+
       },
+
 
       stats: {
-        conversations: 0,
-        messages: 0,
-        images: 0
+        conversations,
+        messages,
+        images
       },
 
-      credits: getCreditStatus(req.userId)
+
+      credits:
+        getCreditStatus(req.userId)
+
     });
+
 
 
   } catch (e) {
@@ -46,10 +104,11 @@ router.get('/stats', requireAuth, async (req, res) => {
     console.error('Account stats error:', e);
 
     res.status(500).json({
-      error: 'Erreur serveur interne.'
+      error:'Erreur serveur interne.'
     });
 
   }
+
 });
 
 
