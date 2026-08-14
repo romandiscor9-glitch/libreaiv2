@@ -4,7 +4,7 @@ const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 
 const config = require('./config/config');
-require('./db/database'); // initialise le schéma au démarrage
+require('./db/database');
 
 const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chat');
@@ -12,6 +12,7 @@ const accountRoutes = require('./routes/account');
 const adminRoutes = require('./routes/admin');
 const adminAuthRoutes = require('./routes/admin-auth');
 const imageRoutes = require('./routes/images');
+
 
 const app = express();
 
@@ -22,11 +23,15 @@ app.set('trust proxy', 1);
 app.use(express.json({ limit: '1mb' }));
 
 
-// --- En-têtes de sécurité basiques ---
+
+// --- Sécurité ---
 app.use((req, res, next) => {
 
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
+
+  // Modifié pour autoriser le panneau admin dans l'iframe LibreAI
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+
   res.setHeader('Referrer-Policy', 'same-origin');
 
   next();
@@ -35,7 +40,8 @@ app.use((req, res, next) => {
 
 
 
-// --- Session persistante ---
+
+// --- Session ---
 app.use(
   session({
 
@@ -62,12 +68,13 @@ app.use(
 
       maxAge: config.SESSION_MAX_AGE_MS,
 
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production'
 
-    },
+    }
 
   })
 );
+
 
 
 
@@ -132,6 +139,7 @@ app.use(
 
 
 
+
 app.get('/admin', (req, res) => {
 
   res.sendFile(
@@ -143,14 +151,12 @@ app.get('/admin', (req, res) => {
 
 
 
-// --- Routes API inconnues ---
+// --- API inexistante ---
 
 app.use('/api', (req, res) => {
 
   res.status(404).json({
-
     error: 'Route API introuvable.'
-
   });
 
 });
@@ -158,7 +164,7 @@ app.use('/api', (req, res) => {
 
 
 
-// --- Toutes les autres routes ---
+// --- Frontend ---
 
 app.use((req, res) => {
 
@@ -171,19 +177,18 @@ app.use((req, res) => {
 
 
 
-// --- Gestionnaire erreurs ---
+// --- Erreurs ---
 
 app.use((err, req, res, next) => {
 
   console.error('Erreur non gérée :', err);
 
   res.status(500).json({
-
     error: 'Erreur serveur interne.'
-
   });
 
 });
+
 
 
 
@@ -202,9 +207,7 @@ app.listen(config.PORT, () => {
 
   console.log(
     `  Clé OpenRouter configurée : ${
-      config.OPENROUTER_API_KEY
-      ? 'oui'
-      : 'NON — le chat renverra une erreur claire'
+      config.OPENROUTER_API_KEY ? 'oui' : 'NON'
     }`
   );
 
